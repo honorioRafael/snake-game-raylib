@@ -10,10 +10,11 @@
 
 #define TRANSPARENT (Color){0, 0, 0, 0}
 
-#define DIRECTION_UP 0
-#define DIRECTION_DOWN 1
-#define DIRECTION_RIGHT 2
-#define DIRECTION_LEFT 3
+#define DIRECTION_IDLE 0
+#define DIRECTION_UP 1
+#define DIRECTION_DOWN 2
+#define DIRECTION_RIGHT 3
+#define DIRECTION_LEFT 4
 
 //----------------------------------------------------------------------------------
 // Structs
@@ -25,6 +26,13 @@ typedef struct
     int direction;
     int size;
 } Snake;
+
+typedef enum
+{
+    Idle,
+    Playing,
+    GameOver
+} GameState;
 
 //----------------------------------------------------------------------------------
 // Functions
@@ -39,6 +47,7 @@ Snake *InitSnake()
     Snake *snake = (Snake *)calloc(1, sizeof(Snake));
     snake->size = 1;
     snake->body[0] = (Vector2){400, 400};
+    snake->direction = DIRECTION_IDLE;
 
     return snake;
 }
@@ -77,6 +86,16 @@ void MoveSnake(Snake *snake)
         snake->body[0].y = SCREEN_SIZE - GRID_SQUARE_SIZE;
 }
 
+bool IsSnakeCollidingWithItself(Snake *snake)
+{
+    for (int i = 1; i < snake->size; i++)
+    {
+        if (snake->body[i].x == snake->body[0].x && snake->body[i].y == snake->body[0].y)
+            return true;
+    }
+    return false;
+}
+
 //
 // Apple
 //
@@ -109,62 +128,98 @@ bool IsSnakeCollidingWithApple(Snake *snake, Vector2 apple)
 // Main
 //----------------------------------------------------------------------------------
 
+GameState gameState = Idle;
+
 int main()
 {
     InitWindow(SCREEN_SIZE, SCREEN_SIZE, "Snake Game");
     SetTargetFPS(60);
 
-    Snake *snake = InitSnake();
-    Vector2 apple = GenApple(snake);
-    float moveInterval = MOVE_INTERVAL;
+    Snake *snake = NULL;
+    Vector2 apple;
+    float moveInterval;
 
     while (!WindowShouldClose())
     {
         BeginDrawing();
         ClearBackground((Color){24, 24, 24, 255});
 
-        // Snake Movement
-        //
-        if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W))
-            snake->direction = DIRECTION_UP;
-        else if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S))
-            snake->direction = DIRECTION_DOWN;
-        else if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D))
-            snake->direction = DIRECTION_RIGHT;
-        else if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A))
-            snake->direction = DIRECTION_LEFT;
-
-        //
-        // Slow the snake down
-        //
-        if (moveInterval == MOVE_INTERVAL)
+        if (gameState == Idle || gameState == GameOver)
         {
-            MoveSnake(snake);
-            moveInterval = 0;
+            if (gameState == GameOver)
+            {
+                DrawText("GAME OVER", 175, 200, 80, RED);
+                DrawText(TextFormat("score: %i", snake->size), 230, 300, 80, RED);
+                DrawText("press [space] to play again", 140, 500, 40, WHITE);
+            }
+            else
+            {
+                DrawText("press [space] to play", 180, 500, 40, WHITE);
+            }
+
+            if (IsKeyPressed(KEY_SPACE))
+            {
+                if (snake != NULL)
+                    free(snake);
+                snake = InitSnake();
+                apple = GenApple(snake);
+                moveInterval = MOVE_INTERVAL;
+
+                gameState = Playing;
+            }
         }
         else
         {
-            moveInterval++;
-        }
 
-        if (IsSnakeCollidingWithApple(snake, apple))
-        {
-            GrowSnake(snake);
-            apple = GenApple(snake);
-        }
+            // Snake Movement
+            //
+            if ((IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) && snake->direction != DIRECTION_DOWN)
+                snake->direction = DIRECTION_UP;
+            else if ((IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) && snake->direction != DIRECTION_UP)
+                snake->direction = DIRECTION_DOWN;
+            else if ((IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) && snake->direction != DIRECTION_LEFT)
+                snake->direction = DIRECTION_RIGHT;
+            else if ((IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) && snake->direction != DIRECTION_RIGHT)
+                snake->direction = DIRECTION_LEFT;
 
-        //
-        // Drawing
-        //
-        for (int i = snake->size - 1; i >= 0; i--)
-        {
-            if (i == 0)
-                DrawRectangle(snake->body[i].x, snake->body[i].y, GRID_SQUARE_SIZE, GRID_SQUARE_SIZE, (Color){19, 120, 25, 255});
+            //
+            // Slow the snake down
+            //
+            if (moveInterval == MOVE_INTERVAL)
+            {
+                if (IsSnakeCollidingWithItself(snake))
+                {
+                    gameState = GameOver;
+                }
+                if (IsSnakeCollidingWithApple(snake, apple))
+                {
+                    GrowSnake(snake);
+                    apple = GenApple(snake);
+                }
+
+                MoveSnake(snake);
+                moveInterval = 0;
+            }
             else
-                DrawRectangle(snake->body[i].x, snake->body[i].y, GRID_SQUARE_SIZE, GRID_SQUARE_SIZE, (Color){30, 179, 38, 255});
-        }
+            {
+                moveInterval++;
+            }
 
-        DrawRectangle(apple.x, apple.y, GRID_SQUARE_SIZE, GRID_SQUARE_SIZE, RED);
+            //
+            // Drawing
+            //
+            for (int i = snake->size - 1; i >= 0; i--)
+            {
+                if (i == 0)
+                    DrawRectangle(snake->body[i].x, snake->body[i].y, GRID_SQUARE_SIZE, GRID_SQUARE_SIZE, (Color){19, 120, 25, 255});
+                else
+                    DrawRectangle(snake->body[i].x, snake->body[i].y, GRID_SQUARE_SIZE, GRID_SQUARE_SIZE, (Color){30, 179, 38, 255});
+            }
+
+            DrawRectangle(apple.x, apple.y, GRID_SQUARE_SIZE, GRID_SQUARE_SIZE, RED);
+
+            DrawText(TextFormat("Score: %i", snake->size), 5, 5, 20, WHITE);
+        }
 
         EndDrawing();
     }
