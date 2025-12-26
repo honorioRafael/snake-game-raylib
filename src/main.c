@@ -170,7 +170,7 @@ int main()
         }
         else
         {
-
+            //
             // Snake Movement
             //
             if ((IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) && snake->direction != DIRECTION_DOWN)
