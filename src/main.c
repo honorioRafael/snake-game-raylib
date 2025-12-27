@@ -9,6 +9,7 @@
 #define MOVE_INTERVAL 4
 
 #define TRANSPARENT (Color){0, 0, 0, 0}
+#define BACKGROUND_COLOR (Color){24, 24, 24, 255}
 
 #define DIRECTION_IDLE 0
 #define DIRECTION_UP 1
@@ -142,7 +143,7 @@ int main()
     while (!WindowShouldClose())
     {
         BeginDrawing();
-        ClearBackground((Color){24, 24, 24, 255});
+        ClearBackground(BACKGROUND_COLOR);
 
         if (gameState == Idle || gameState == GameOver)
         {
@@ -217,7 +218,13 @@ int main()
             }
 
             DrawRectangle(apple.x, apple.y, GRID_SQUARE_SIZE, GRID_SQUARE_SIZE, RED);
-
+            
+            for (int i = 0; i < GRID_SIZE; i++)
+            {
+                DrawLine(0, i * GRID_SQUARE_SIZE, SCREEN_SIZE, i * GRID_SQUARE_SIZE, BACKGROUND_COLOR);
+                DrawLine(i * GRID_SQUARE_SIZE, 0, i * GRID_SQUARE_SIZE, SCREEN_SIZE, BACKGROUND_COLOR);
+            }
+            
             DrawText(TextFormat("Score: %i", snake->size), 5, 5, 20, WHITE);
         }
 
